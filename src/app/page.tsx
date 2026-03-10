@@ -9,11 +9,8 @@ export default function LandingPage() {
       <nav className="flex items-center justify-between px-6 py-4 border-b">
         <span className="text-xl font-bold tracking-tight">YouLearn</span>
         <div className="flex gap-3">
-          <Link href="/login" className={buttonVariants({ variant: 'ghost' })}>
-            Log in
-          </Link>
-          <Link href="/signup" className={buttonVariants({ variant: 'default' })}>
-            Get started free
+          <Link href="/login" className={buttonVariants({ variant: 'default' })}>
+            Sign in
           </Link>
         </div>
       </nav>
@@ -34,11 +31,8 @@ export default function LandingPage() {
           feedback on every submission.
         </p>
         <div className="flex gap-3">
-          <Link href="/signup" className={cn(buttonVariants({ size: 'lg' }), 'px-6')}>
-            Build my learning path
-          </Link>
-          <Link href="/login" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'px-6')}>
-            Sign in
+          <Link href="/login" className={cn(buttonVariants({ size: 'lg' }), 'px-6')}>
+            Get started free
           </Link>
         </div>
       </main>

@@ -14,7 +14,21 @@
       "Bash(npx tsc:*)",
       "Bash(grep -n \"error.errors\\\\[0\\\\]\" /Users/timzelikovsky/Desktop/YouLearn/src/app/api/*/route.ts)",
       "Bash(npm run:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh api:*)",
+      "Bash(curl -s --request GET \\\\\n  --url https://judge0-ce.p.rapidapi.com/about \\\\\n  --header 'x-rapidapi-host: judge0-ce.p.rapidapi.com' \\\\\n  --header 'x-rapidapi-key: 24d9603052msh97643100d1ba5edp14fda9jsna24731fb0eef' | python3 -m json.tool 2>/dev/null || echo \"raw response\")",
+      "Bash(curl -s --request POST \\\\\n  --url \"https://api.supabase.com/v1/projects/kbrnqwtofhcgjbkaccmf/database/query\" \\\\\n  --header \"Authorization: Bearer sbp_41a0802cb587633534f51c7c5ae6f2e615c92f36\" \\\\\n  --header \"Content-Type: application/json\" \\\\\n  --data '{\"query\": \"SELECT table_name FROM information_schema.tables WHERE table_schema = '\"'\"'public'\"'\"' ORDER BY table_name;\"}' \\\\\n  | python3 -m json.tool)",
+      "Bash(curl -s --request POST \\\\\n  --url \"https://api.supabase.com/v1/projects/kbrnqwtofhcgjbkaccmf/database/query\" \\\\\n  --header \"Authorization: Bearer sbp_41a0802cb587633534f51c7c5ae6f2e615c92f36\" \\\\\n  --header \"Content-Type: application/json\" \\\\\n  --data '{\"query\": \"SELECT routine_name FROM information_schema.routines WHERE routine_schema = '\"'\"'public'\"'\"' AND routine_type = '\"'\"'FUNCTION'\"'\"';\"}' \\\\\n  | python3 -m json.tool)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001)",
+      "Bash(pkill -f \"next dev\" 2>/dev/null; sleep 2; rm -f /Users/timzelikovsky/Desktop/YouLearn/.next/dev/lock)",
+      "Bash(sleep 8 && curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)"
     ]
   }
 }
