@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:judge0.com)",
+      "WebFetch(domain:www.beam.cloud)",
+      "Bash(node --version && npm --version 2>/dev/null; npx --version 2>/dev/null)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --no-eslint --yes 2>&1 | tail -20)",
+      "Bash(npx create-next-app@latest youlearn-temp --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --no-eslint --yes 2>&1 | tail -20)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest init --yes --defaults 2>&1 | tail -20)"
+    ]
+  }
+}
