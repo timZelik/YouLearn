@@ -8,7 +8,13 @@
       "Bash(npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --no-eslint --yes 2>&1 | tail -20)",
       "Bash(npx create-next-app@latest youlearn-temp --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --no-eslint --yes 2>&1 | tail -20)",
       "Bash(npm install:*)",
-      "Bash(npx shadcn@latest init --yes --defaults 2>&1 | tail -20)"
+      "Bash(npx shadcn@latest init --yes --defaults 2>&1 | tail -20)",
+      "Bash(npx shadcn@latest add card input textarea select badge progress tabs --yes 2>&1 | tail -15)",
+      "Bash(mkdir -p src/app src/components/ui src/lib/supabase src/lib/claude src/lib/judge0 src/hooks src/types && mv app/* src/app/ && mv components/ui/* src/components/ui/ && mv lib/utils.ts src/lib/ && rm -rf app components lib && ls src/)",
+      "Bash(npx tsc:*)",
+      "Bash(grep -n \"error.errors\\\\[0\\\\]\" /Users/timzelikovsky/Desktop/YouLearn/src/app/api/*/route.ts)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)"
     ]
   }
 }
