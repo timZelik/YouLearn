@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { requireAuthenticatedUser } from '@/lib/auth/requireAuthenticatedUser'
+import { createServiceClient } from '@/lib/supabase/server'
 import { generateLearningPath } from '@/lib/claude/generateLearningPath'
 
 const OnboardingSchema = z.object({
@@ -12,20 +13,14 @@ const OnboardingSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    const auth = await requireAuthenticatedUser()
+    if (!auth.authenticated) return auth.response
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, supabase } = auth.context
 
     const body = await request.json()
     const data = OnboardingSchema.parse(body)
 
-    // Save onboarding response
     const { error: onboardingError } = await supabase
       .from('onboarding_responses')
       .insert({ user_id: user.id, ...data })
@@ -35,10 +30,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save onboarding' }, { status: 500 })
     }
 
-    // Generate learning path with Claude
     const learningPath = await generateLearningPath(data)
 
-    // Atomically insert the full learning path using service_role
     const serviceClient = await createServiceClient()
     const { data: pathId, error: rpcError } = await serviceClient.rpc('create_learning_path', {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,7 +48,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create learning path' }, { status: 500 })
     }
 
-    // Mark onboarding as complete
     await supabase
       .from('profiles')
       .update({ onboarding_completed: true })

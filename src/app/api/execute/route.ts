@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { requireAuthenticatedUser } from '@/lib/auth/requireAuthenticatedUser'
+import { createServiceClient } from '@/lib/supabase/server'
 import { executeCode, normalizeOutput } from '@/lib/judge0/execute'
 import { TestResult } from '@/types/learning'
 
@@ -12,20 +13,14 @@ const ExecuteSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    const auth = await requireAuthenticatedUser()
+    if (!auth.authenticated) return auth.response
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, supabase } = auth.context
 
     const body = await request.json()
     const { lesson_id, code, mode } = ExecuteSchema.parse(body)
 
-    // Verify lesson belongs to this user
     const { data: lesson, error: lessonError } = await supabase
       .from('lessons')
       .select('id, judge0_language_id, course_id')
@@ -37,7 +32,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
     }
 
-    // Fetch test cases — use service_role to include hidden ones
     const serviceClient = await createServiceClient()
     const { data: testCases, error: tcError } = await serviceClient
       .from('test_cases')
@@ -49,10 +43,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch test cases' }, { status: 500 })
     }
 
-    // For "run" mode, only use visible test cases
     const casesToRun = mode === 'run' ? testCases.filter((tc) => !tc.is_hidden) : testCases
 
-    // Execute all test cases in parallel
     const results = await Promise.all(
       casesToRun.map(async (tc): Promise<TestResult> => {
         try {
@@ -89,7 +81,6 @@ export async function POST(request: NextRequest) {
 
     const allPassed = results.every((r) => r.passed)
 
-    // Save submission
     const { data: submission, error: subError } = await supabase
       .from('submissions')
       .insert({
@@ -107,7 +98,6 @@ export async function POST(request: NextRequest) {
       console.error('Submission insert error:', subError)
     }
 
-    // Update lesson progress
     if (mode === 'submit') {
       await supabase
         .from('user_lesson_progress')

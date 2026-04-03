@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuthenticatedUser } from '@/lib/auth/requireAuthenticatedUser'
 import { generateFeedback } from '@/lib/claude/generateFeedback'
 import { TestResult } from '@/types/learning'
 
@@ -9,22 +9,22 @@ const FeedbackSchema = z.object({
   lesson_id: z.string().uuid(),
 })
 
+const judge0LanguageNames: Record<number, string> = {
+  71: 'python', 63: 'javascript', 74: 'typescript',
+  62: 'java', 54: 'cpp', 50: 'c', 60: 'go',
+  73: 'rust', 72: 'ruby', 83: 'swift',
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    const auth = await requireAuthenticatedUser()
+    if (!auth.authenticated) return auth.response
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, supabase } = auth.context
 
     const body = await request.json()
     const { submission_id, lesson_id } = FeedbackSchema.parse(body)
 
-    // Fetch submission (verify ownership)
     const { data: submission, error: subError } = await supabase
       .from('submissions')
       .select('id, code, test_results, all_passed')
@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Submission not found' }, { status: 404 })
     }
 
-    // Fetch lesson context
     const { data: lesson, error: lessonError } = await supabase
       .from('lessons')
       .select('exercise_prompt, starter_code, judge0_language_id')
@@ -48,12 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 })
     }
 
-    const languageMap: Record<number, string> = {
-      71: 'python', 63: 'javascript', 74: 'typescript',
-      62: 'java', 54: 'cpp', 50: 'c', 60: 'go',
-      73: 'rust', 72: 'ruby', 83: 'swift',
-    }
-    const language = languageMap[lesson.judge0_language_id] ?? 'code'
+    const language = judge0LanguageNames[lesson.judge0_language_id] ?? 'code'
 
     const feedback = await generateFeedback({
       exercisePrompt: lesson.exercise_prompt,
@@ -64,14 +58,9 @@ export async function POST(request: NextRequest) {
       allPassed: submission.all_passed,
     })
 
-    // Save feedback
     const { data: savedFeedback, error: fbError } = await supabase
       .from('ai_feedback')
-      .insert({
-        submission_id,
-        user_id: user.id,
-        ...feedback,
-      })
+      .insert({ submission_id, user_id: user.id, ...feedback })
       .select()
       .single()
 
