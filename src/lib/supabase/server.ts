@@ -1,9 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/database'
-import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies'
 
-function buildCookieHandler(cookieStore: ReadonlyRequestCookies) {
+type CookieStore = Awaited<ReturnType<typeof cookies>>
+
+function buildCookieHandler(cookieStore: CookieStore) {
   return {
     getAll() {
       return cookieStore.getAll()
