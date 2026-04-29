@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
 import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generateCourseContentBatch } from '@/lib/generation/generateCourseContent'
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     // If lesson just completed, check if the whole course is done
     // and if so, kick off generation of the next course in the background
     if (score === 100) {
-      triggerNextCourseIfReady(user.id, lesson_id).catch(console.error)
+      waitUntil(triggerNextCourseIfReady(user.id, lesson_id).catch(console.error))
     }
 
     return NextResponse.json({

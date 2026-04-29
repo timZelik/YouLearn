@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
+
+export const maxDuration = 60 // seconds — stub generation + background kick-off
+
 import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generatePathStub, JUDGE0_LANGUAGE_IDS } from '@/lib/claude/generateLearningPath'
@@ -87,18 +91,20 @@ export async function POST(request: NextRequest) {
         .limit(1)
         .single()
 
-      generateCourseContentBatch(
-        {
-          courseId: firstCourse.id,
-          courseTitle: firstCourse.title,
-          courseDescription: firstCourse.description,
-          language: onboarding?.preferred_language ?? data.preferred_language,
-          userBackground: onboarding?.background ?? data.background,
-          userGoals: onboarding?.goals ?? data.goals,
-          fromOrderIndex: 0,
-        },
-        serviceClient
-      ).catch((err) => console.error('Background lesson generation failed:', err))
+      waitUntil(
+        generateCourseContentBatch(
+          {
+            courseId: firstCourse.id,
+            courseTitle: firstCourse.title,
+            courseDescription: firstCourse.description,
+            language: onboarding?.preferred_language ?? data.preferred_language,
+            userBackground: onboarding?.background ?? data.background,
+            userGoals: onboarding?.goals ?? data.goals,
+            fromOrderIndex: 0,
+          },
+          serviceClient
+        ).catch((err) => console.error('Background lesson generation failed:', err))
+      )
     }
 
     return NextResponse.json({ success: true, path_id: pathId })

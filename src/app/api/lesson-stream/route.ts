@@ -3,6 +3,8 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { streamLessonGeneration } from '@/lib/generation/generateCourseContent'
 
+export const maxDuration = 120 // seconds — streaming generation can take 30-60s
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const lessonId = searchParams.get('lessonId')
