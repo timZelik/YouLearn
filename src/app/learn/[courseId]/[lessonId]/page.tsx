@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import LessonLayout from '@/components/lesson/LessonLayout'
+import StreamingLessonView from '@/components/lesson/StreamingLessonView'
 
 type LessonRow = {
   id: string
@@ -12,10 +13,11 @@ type LessonRow = {
   difficulty: string
   order_index: number
   course_id: string
+  content_status: string
 }
 
-type CourseLessonRef = { id: string; order_index: number; course_id: string }
-type CourseRow = { id: string; title: string; lessons: CourseLessonRef[] }
+type CourseLessonRef = { id: string; order_index: number; course_id: string; content_status: string }
+type CourseRow = { id: string; title: string; description: string; lessons: CourseLessonRef[] }
 
 export default async function LessonPage({
   params,
@@ -24,16 +26,13 @@ export default async function LessonPage({
 }) {
   const { courseId, lessonId } = await params
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
 
-  // Fetch lesson — exclude solution_code (never send to client)
   const { data: lessonRaw } = await supabase
     .from('lessons')
-    .select('id, title, theory_markdown, exercise_prompt, starter_code, judge0_language_id, difficulty, order_index, course_id')
+    .select('id, title, theory_markdown, exercise_prompt, starter_code, judge0_language_id, difficulty, order_index, course_id, content_status')
     .eq('id', lessonId)
     .eq('course_id', courseId)
     .eq('user_id', user.id)
@@ -43,10 +42,14 @@ export default async function LessonPage({
 
   const lesson = lessonRaw as unknown as LessonRow
 
-  // Fetch course title and lesson list
+  // Content not ready — stream it live to the client instead of blocking here
+  if (lesson.content_status !== 'generated') {
+    return <StreamingLessonView lessonId={lessonId} lessonTitle={lesson.title} />
+  }
+
   const { data: courseRaw } = await supabase
     .from('courses')
-    .select('id, title, lessons(id, order_index, course_id)')
+    .select('id, title, description, lessons(id, order_index, course_id, content_status)')
     .eq('id', courseId)
     .eq('user_id', user.id)
     .single()
@@ -54,8 +57,6 @@ export default async function LessonPage({
   if (!courseRaw) notFound()
 
   const course = courseRaw as unknown as CourseRow
-
-  // Determine next lesson
   const sortedLessons = [...course.lessons].sort((a, b) => a.order_index - b.order_index)
   const currentIdx = sortedLessons.findIndex((l) => l.id === lessonId)
   const nextLesson = sortedLessons[currentIdx + 1] ?? null

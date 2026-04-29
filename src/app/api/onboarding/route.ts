@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { generateLearningPath } from '@/lib/claude/generateLearningPath'
+import { generatePathStub, JUDGE0_LANGUAGE_IDS } from '@/lib/claude/generateLearningPath'
+import { generateCourseContentBatch } from '@/lib/generation/generateCourseContent'
 
 const OnboardingSchema = z.object({
   background: z.string().min(10, 'Tell us more about your background'),
@@ -13,40 +14,41 @@ const OnboardingSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check free tier cap
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('paths_created, max_free_paths')
+      .eq('id', user.id)
+      .single()
+
+    if (profile && profile.paths_created >= profile.max_free_paths) {
+      return NextResponse.json({ error: 'Free path limit reached' }, { status: 403 })
+    }
+
     const body = await request.json()
     const data = OnboardingSchema.parse(body)
 
-    // Save onboarding response
-    const { error: onboardingError } = await supabase
-      .from('onboarding_responses')
-      .insert({ user_id: user.id, ...data })
+    await supabase.from('onboarding_responses').insert({ user_id: user.id, ...data })
 
-    if (onboardingError) {
-      console.error('Onboarding insert error:', onboardingError)
-      return NextResponse.json({ error: 'Failed to save onboarding' }, { status: 500 })
-    }
+    // Generate only stubs — fast and cheap (uses Haiku)
+    const stub = await generatePathStub(data)
 
-    // Generate learning path with Claude
-    const learningPath = await generateLearningPath(data)
+    const judge0LanguageId = JUDGE0_LANGUAGE_IDS[data.preferred_language.toLowerCase()] ?? 71
 
-    // Atomically insert the full learning path using service_role
     const serviceClient = await createServiceClient()
-    const { data: pathId, error: rpcError } = await serviceClient.rpc('create_learning_path', {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: pathId, error: rpcError } = await serviceClient.rpc('create_path_stub', {
       payload: JSON.parse(JSON.stringify({
         user_id: user.id,
-        title: learningPath.title,
-        description: learningPath.description,
-        courses: learningPath.courses,
+        title: stub.title,
+        description: stub.description,
+        judge0_language_id: judge0LanguageId,
+        courses: stub.courses,
       })),
     })
 
@@ -55,11 +57,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create learning path' }, { status: 500 })
     }
 
-    // Mark onboarding as complete
     await supabase
       .from('profiles')
       .update({ onboarding_completed: true })
       .eq('id', user.id)
+
+    // Eagerly generate the first course's lessons in the background.
+    // User goes to dashboard immediately; by the time they click a lesson it's ready.
+    const { data: firstCourse } = await serviceClient
+      .from('courses')
+      .select('id, title, description')
+      .eq('learning_path_id', pathId)
+      .eq('order_index', 0)
+      .single()
+
+    if (firstCourse) {
+      const { data: onboarding } = await supabase
+        .from('onboarding_responses')
+        .select('background, goals, preferred_language')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      generateCourseContentBatch(
+        {
+          courseId: firstCourse.id,
+          courseTitle: firstCourse.title,
+          courseDescription: firstCourse.description,
+          language: onboarding?.preferred_language ?? data.preferred_language,
+          userBackground: onboarding?.background ?? data.background,
+          userGoals: onboarding?.goals ?? data.goals,
+          fromOrderIndex: 0,
+        },
+        serviceClient
+      ).catch((err) => console.error('Background lesson generation failed:', err))
+    }
 
     return NextResponse.json({ success: true, path_id: pathId })
   } catch (error) {

@@ -1,6 +1,4 @@
 import Link from 'next/link'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import ProgressRing from './ProgressRing'
 
 interface Lesson {
@@ -17,88 +15,114 @@ interface CourseCardProps {
     title: string
     description: string
     order_index: number
+    status: string
     lessons: Lesson[]
   }
 }
 
-const DIFFICULTY_COLORS: Record<string, string> = {
-  intro: 'bg-green-100 text-green-800',
-  easy: 'bg-blue-100 text-blue-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  hard: 'bg-orange-100 text-orange-800',
-  capstone: 'bg-purple-100 text-purple-800',
+const DIFFICULTY_STYLES: Record<string, string> = {
+  intro:    'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400',
+  easy:     'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400',
+  medium:   'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400',
+  hard:     'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400',
+  capstone: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400',
+}
+
+const STATUS_DOT: Record<string, string> = {
+  completed:   'bg-emerald-500',
+  in_progress: 'bg-primary',
+  not_started: 'bg-border',
 }
 
 export default function CourseCard({ course }: CourseCardProps) {
+  const isPreparing = course.status !== 'generated'
   const lessons = [...course.lessons].sort((a, b) => a.order_index - b.order_index)
   const completedCount = lessons.filter(
     (l) => l.user_lesson_progress?.[0]?.status === 'completed'
   ).length
   const progress = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0
+  const isComplete = progress === 100
 
-  // Find first incomplete lesson
   const nextLesson = lessons.find(
     (l) => l.user_lesson_progress?.[0]?.status !== 'completed'
   ) ?? lessons[0]
 
+  const accentColor = isComplete
+    ? 'bg-emerald-500'
+    : completedCount > 0
+    ? 'bg-primary'
+    : 'bg-border'
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-row items-start gap-4">
-        <div className="flex flex-col gap-1 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Course {course.order_index + 1}</span>
-            {progress === 100 && (
-              <Badge className="bg-green-100 text-green-800 text-xs">Completed</Badge>
-            )}
+    <div className="group relative flex overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
+      {/* Left accent bar */}
+      <div className={`w-1 flex-shrink-0 ${accentColor} transition-colors`} />
+
+      <div className="flex flex-1 flex-col gap-4 p-5">
+        {/* Header */}
+        <div className="flex items-start gap-4">
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <span className="text-xs font-medium text-muted-foreground">
+              Course {course.order_index + 1}
+            </span>
+            <h3 className="font-semibold leading-snug flex items-center gap-2">
+              {course.title}
+              {isPreparing && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  Preparing
+                </span>
+              )}
+            </h3>
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+              {course.description}
+            </p>
           </div>
-          <CardTitle className="text-base leading-snug">{course.title}</CardTitle>
-          <CardDescription className="text-sm line-clamp-2">{course.description}</CardDescription>
-        </div>
-        <ProgressRing value={progress} size={48} strokeWidth={5} />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="text-sm text-muted-foreground">
-          {completedCount} / {lessons.length} lessons completed
+          <div className="flex-shrink-0">
+            <ProgressRing value={progress} size={44} strokeWidth={4} />
+          </div>
         </div>
 
+        {/* Progress label */}
+        <p className="text-xs text-muted-foreground">
+          {completedCount} / {lessons.length} lessons completed
+        </p>
+
         {/* Lesson list */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.5">
           {lessons.slice(0, 3).map((lesson) => {
             const status = lesson.user_lesson_progress?.[0]?.status ?? 'not_started'
             return (
               <Link
                 key={lesson.id}
                 href={`/learn/${course.id}/${lesson.id}`}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-accent"
               >
-                <span className={`h-4 w-4 rounded-full flex-shrink-0 ${
-                  status === 'completed'
-                    ? 'bg-green-500'
-                    : status === 'in_progress'
-                    ? 'bg-blue-400'
-                    : 'bg-gray-200'
-                }`} />
-                <span className="flex-1 truncate">{lesson.title}</span>
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${DIFFICULTY_COLORS[lesson.difficulty] ?? ''}`}>
+                <span className={`h-2 w-2 rounded-full flex-shrink-0 ${STATUS_DOT[status] ?? STATUS_DOT.not_started}`} />
+                <span className="flex-1 truncate text-foreground">{lesson.title}</span>
+                <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${DIFFICULTY_STYLES[lesson.difficulty] ?? ''}`}>
                   {lesson.difficulty}
                 </span>
               </Link>
             )
           })}
           {lessons.length > 3 && (
-            <p className="text-xs text-muted-foreground px-2">+ {lessons.length - 3} more lessons</p>
+            <p className="px-2 py-1 text-xs text-muted-foreground">
+              + {lessons.length - 3} more lessons
+            </p>
           )}
         </div>
 
+        {/* CTA */}
         {nextLesson && (
           <Link
             href={`/learn/${course.id}/${nextLesson.id}`}
-            className="mt-1 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 self-start"
           >
-            {completedCount === 0 ? 'Start course' : progress === 100 ? 'Review' : 'Continue'}
+            {completedCount === 0 ? 'Start course' : isComplete ? 'Review' : 'Continue'} →
           </Link>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

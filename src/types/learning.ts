@@ -5,29 +5,32 @@ export interface TestCase {
   order_index: number
 }
 
-export interface Lesson {
+export interface LessonStub {
   title: string
+  difficulty: 'intro' | 'easy' | 'medium' | 'hard' | 'capstone'
+  order_index: number
+}
+
+export interface Lesson extends LessonStub {
   theory_markdown: string
   exercise_prompt: string
   starter_code: string
   solution_code: string
   judge0_language_id: number
-  difficulty: 'intro' | 'easy' | 'medium' | 'hard' | 'capstone'
-  order_index: number
   test_cases: TestCase[]
 }
 
-export interface Course {
+export interface CourseStub {
   title: string
   description: string
   order_index: number
-  lessons: Lesson[]
+  lessons: LessonStub[]
 }
 
-export interface LearningPathResponse {
+export interface PathStub {
   title: string
   description: string
-  courses: Course[]
+  courses: CourseStub[]
 }
 
 export interface TestResult {

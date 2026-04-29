@@ -13,7 +13,10 @@ create table public.profiles (
   current_streak integer default 0 not null,
   longest_streak integer default 0 not null,
   last_activity_date date,
-  onboarding_completed boolean default false not null
+  onboarding_completed boolean default false not null,
+  -- Free tier usage tracking
+  paths_created integer default 0 not null,
+  max_free_paths integer default 3 not null  -- 3 topics OR 1 full curriculum counts as 3
 );
 
 alter table public.profiles enable row level security;
@@ -105,7 +108,11 @@ create table public.courses (
   created_at timestamptz default now() not null,
   title text not null,
   description text not null,
-  order_index integer not null
+  order_index integer not null,
+  -- 'pending'   = stub only, lessons not yet generated
+  -- 'generating' = Claude is working on it
+  -- 'generated' = lessons exist and are ready
+  status text default 'pending' not null check (status in ('pending', 'generating', 'generated'))
 );
 
 alter table public.courses enable row level security;
@@ -123,13 +130,15 @@ create table public.lessons (
   user_id uuid references auth.users on delete cascade not null,
   created_at timestamptz default now() not null,
   title text not null,
-  theory_markdown text not null,
-  exercise_prompt text not null,
-  starter_code text not null,
-  solution_code text not null,
-  judge0_language_id integer not null,
+  -- Content fields: null until generated on-demand
+  theory_markdown text,
+  exercise_prompt text,
+  starter_code text,
+  solution_code text,
+  judge0_language_id integer not null,  -- known at stub creation time from user's language choice
   difficulty text not null check (difficulty in ('intro','easy','medium','hard','capstone')),
-  order_index integer not null
+  order_index integer not null,
+  content_status text default 'pending' not null check (content_status in ('pending', 'generating', 'generated'))
 );
 
 alter table public.lessons enable row level security;
@@ -239,80 +248,59 @@ create trigger lesson_progress_updated_at
   for each row execute procedure public.handle_updated_at();
 
 -- ============================================================
--- STORED PROCEDURE: create_learning_path (atomic insert)
+-- STORED PROCEDURE: create_path_stub (atomic insert, no lesson content)
+-- Inserts: learning path + course stubs + lesson stubs (titles only, no content)
+-- Content is generated on-demand when user first opens a lesson.
 -- ============================================================
-create or replace function public.create_learning_path(payload jsonb)
+create or replace function public.create_path_stub(payload jsonb)
 returns uuid language plpgsql security definer
 as $$
 declare
   v_user_id uuid;
   v_path_id uuid;
   v_course_id uuid;
-  v_lesson_id uuid;
   v_course jsonb;
   v_lesson jsonb;
-  v_tc jsonb;
 begin
   v_user_id := (payload ->> 'user_id')::uuid;
 
-  -- Insert learning path
   insert into public.learning_paths (user_id, title, description)
-  values (
-    v_user_id,
-    payload ->> 'title',
-    payload ->> 'description'
-  )
+  values (v_user_id, payload ->> 'title', payload ->> 'description')
   returning id into v_path_id;
 
-  -- Insert courses
   for v_course in select * from jsonb_array_elements(payload -> 'courses')
   loop
-    insert into public.courses (learning_path_id, user_id, title, description, order_index)
+    insert into public.courses (learning_path_id, user_id, title, description, order_index, status)
     values (
       v_path_id,
       v_user_id,
       v_course ->> 'title',
       v_course ->> 'description',
-      (v_course ->> 'order_index')::integer
+      (v_course ->> 'order_index')::integer,
+      'pending'
     )
     returning id into v_course_id;
 
-    -- Insert lessons
+    -- Insert lesson stubs: title + difficulty + order_index only, content stays null
     for v_lesson in select * from jsonb_array_elements(v_course -> 'lessons')
     loop
       insert into public.lessons (
-        course_id, user_id, title, theory_markdown, exercise_prompt,
-        starter_code, solution_code, judge0_language_id, difficulty, order_index
+        course_id, user_id, title, judge0_language_id, difficulty, order_index, content_status
       )
       values (
         v_course_id,
         v_user_id,
         v_lesson ->> 'title',
-        v_lesson ->> 'theory_markdown',
-        v_lesson ->> 'exercise_prompt',
-        v_lesson ->> 'starter_code',
-        v_lesson ->> 'solution_code',
-        (v_lesson ->> 'judge0_language_id')::integer,
+        (payload ->> 'judge0_language_id')::integer,
         v_lesson ->> 'difficulty',
-        (v_lesson ->> 'order_index')::integer
-      )
-      returning id into v_lesson_id;
-
-      -- Insert test cases
-      for v_tc in select * from jsonb_array_elements(v_lesson -> 'test_cases')
-      loop
-        insert into public.test_cases (lesson_id, input, expected_output, is_hidden, order_index)
-        values (
-          v_lesson_id,
-          v_tc ->> 'input',
-          v_tc ->> 'expected_output',
-          (v_tc ->> 'is_hidden')::boolean,
-          (v_tc ->> 'order_index')::integer
-        );
-      end loop;
-
+        (v_lesson ->> 'order_index')::integer,
+        'pending'
+      );
     end loop;
   end loop;
+
+  -- Increment the user's path count
+  update public.profiles set paths_created = paths_created + 1 where id = v_user_id;
 
   return v_path_id;
 end;

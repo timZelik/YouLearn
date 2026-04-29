@@ -18,7 +18,7 @@ export default function ProgressRing({ value, size = 40, strokeWidth = 4 }: Prog
         fill="none"
         stroke="currentColor"
         strokeWidth={strokeWidth}
-        className="text-gray-200"
+        className="text-muted"
       />
       <circle
         cx={size / 2}
@@ -30,7 +30,7 @@ export default function ProgressRing({ value, size = 40, strokeWidth = 4 }: Prog
         strokeDasharray={circumference}
         strokeDashoffset={offset}
         strokeLinecap="round"
-        className="text-blue-600 transition-all duration-500"
+        className="text-primary transition-all duration-500"
       />
     </svg>
   )
