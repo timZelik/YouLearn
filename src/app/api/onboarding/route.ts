@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generatePathStub, JUDGE0_LANGUAGE_IDS } from '@/lib/claude/generateLearningPath'
 import { generateCourseContentBatch } from '@/lib/generation/generateCourseContent'
+import { validatePrompt } from '@/lib/validation/validatePrompt'
 
 const OnboardingSchema = z.object({
   background: z.string().min(10, 'Tell us more about your background'),
@@ -33,6 +34,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const data = OnboardingSchema.parse(body)
+
+    // Validate prompt before spending any tokens
+    const validation = await validatePrompt(data.background, data.goals)
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.reason }, { status: 422 })
+    }
 
     await supabase.from('onboarding_responses').insert({ user_id: user.id, ...data })
 

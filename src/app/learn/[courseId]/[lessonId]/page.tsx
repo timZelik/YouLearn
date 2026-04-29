@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import LessonLayout from '@/components/lesson/LessonLayout'
 import StreamingLessonView from '@/components/lesson/StreamingLessonView'
+import PathSidebar from '@/components/lesson/PathSidebar'
 
 type LessonRow = {
   id: string
@@ -16,8 +17,28 @@ type LessonRow = {
   content_status: string
 }
 
-type CourseLessonRef = { id: string; order_index: number; course_id: string; content_status: string }
-type CourseRow = { id: string; title: string; description: string; lessons: CourseLessonRef[] }
+type LessonNav = {
+  id: string
+  title: string
+  difficulty: string
+  order_index: number
+  content_status: string
+  user_lesson_progress: { status: string }[] | null
+}
+
+type CourseNav = {
+  id: string
+  title: string
+  order_index: number
+  status: string
+  lessons: LessonNav[]
+}
+
+type LearningPathRow = {
+  id: string
+  title: string
+  courses: CourseNav[]
+}
 
 export default async function LessonPage({
   params,
@@ -30,6 +51,7 @@ export default async function LessonPage({
 
   if (!user) redirect('/login')
 
+  // Fetch lesson content
   const { data: lessonRaw } = await supabase
     .from('lessons')
     .select('id, title, theory_markdown, exercise_prompt, starter_code, judge0_language_id, difficulty, order_index, course_id, content_status')
@@ -39,33 +61,82 @@ export default async function LessonPage({
     .single()
 
   if (!lessonRaw) notFound()
-
   const lesson = lessonRaw as unknown as LessonRow
 
-  // Content not ready — stream it live to the client instead of blocking here
-  if (lesson.content_status !== 'generated') {
-    return <StreamingLessonView lessonId={lessonId} lessonTitle={lesson.title} />
-  }
-
-  const { data: courseRaw } = await supabase
-    .from('courses')
-    .select('id, title, description, lessons(id, order_index, course_id, content_status)')
-    .eq('id', courseId)
+  // Fetch full learning path for sidebar — runs in parallel with lesson fetch above
+  const { data: pathRaw } = await supabase
+    .from('learning_paths')
+    .select(`
+      id, title,
+      courses (
+        id, title, order_index, status,
+        lessons (
+          id, title, difficulty, order_index, content_status,
+          user_lesson_progress (status)
+        )
+      )
+    `)
     .eq('user_id', user.id)
     .single()
 
-  if (!courseRaw) notFound()
+  const path = pathRaw as unknown as LearningPathRow | null
 
-  const course = courseRaw as unknown as CourseRow
-  const sortedLessons = [...course.lessons].sort((a, b) => a.order_index - b.order_index)
-  const currentIdx = sortedLessons.findIndex((l) => l.id === lessonId)
-  const nextLesson = sortedLessons[currentIdx + 1] ?? null
+  // Build sidebar data
+  const sidebarCourses = (path?.courses ?? [])
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((c) => ({
+      id: c.id,
+      title: c.title,
+      order_index: c.order_index,
+      status: c.status,
+      lessons: [...c.lessons]
+        .sort((a, b) => a.order_index - b.order_index)
+        .map((l) => ({
+          id: l.id,
+          title: l.title,
+          difficulty: l.difficulty,
+          order_index: l.order_index,
+          content_status: l.content_status,
+          progress_status: l.user_lesson_progress?.[0]?.status ?? 'not_started',
+        })),
+    }))
+
+  const currentCourse = sidebarCourses.find((c) => c.id === courseId)
+  const currentLessons = currentCourse?.lessons ?? []
+  const currentIdx = currentLessons.findIndex((l) => l.id === lessonId)
+  const nextLesson = currentLessons[currentIdx + 1] ?? null
+
+  const sidebar = (
+    <PathSidebar
+      pathTitle={path?.title ?? 'Your Learning Path'}
+      courses={sidebarCourses}
+      activeLessonId={lessonId}
+      activeCourseId={courseId}
+    />
+  )
+
+  // Content not ready — stream it live
+  if (lesson.content_status !== 'generated') {
+    return (
+      <div className="flex h-screen overflow-hidden">
+        {sidebar}
+        <div className="flex-1 overflow-hidden">
+          <StreamingLessonView lessonId={lessonId} lessonTitle={lesson.title} />
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <LessonLayout
-      lesson={lesson}
-      courseTitle={course.title}
-      nextLesson={nextLesson}
-    />
+    <div className="flex h-screen overflow-hidden">
+      {sidebar}
+      <div className="flex-1 overflow-hidden">
+        <LessonLayout
+          lesson={lesson}
+          courseTitle={currentCourse?.title ?? ''}
+          nextLesson={nextLesson}
+        />
+      </div>
+    </div>
   )
 }
