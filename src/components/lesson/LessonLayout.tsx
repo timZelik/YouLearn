@@ -132,20 +132,26 @@ export default function LessonLayout({ lesson, courseTitle, nextLesson }: Lesson
 /* ── Theory left pane ── */
 function TheoryPane({ lesson }: { lesson: LessonData }) {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-bold leading-snug">{lesson.title}</h1>
-      </div>
-      <article className="prose prose-sm prose-slate max-w-none dark:prose-invert
-        prose-headings:font-semibold prose-headings:tracking-tight
-        prose-h2:text-base prose-h3:text-sm
-        prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:text-[0.8em] prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
-        prose-pre:bg-muted prose-pre:border prose-pre:border-border">
+    <div className="flex flex-col gap-7">
+      <h1 className="text-[1.35rem] font-semibold tracking-tight leading-snug">{lesson.title}</h1>
+
+      <article className="prose prose-sm max-w-none dark:prose-invert
+        prose-p:text-[0.9rem] prose-p:leading-[1.75] prose-p:text-foreground/90
+        prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-foreground
+        prose-h2:text-[1rem] prose-h2:mt-6 prose-h2:mb-2
+        prose-h3:text-[0.9rem] prose-h3:mt-4 prose-h3:mb-1.5
+        prose-strong:font-semibold prose-strong:text-foreground
+        prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+        prose-li:text-[0.9rem] prose-li:leading-[1.7]
+        prose-code:rounded-md prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5
+        prose-code:text-[0.82em] prose-code:font-medium prose-code:before:content-none prose-code:after:content-none
+        prose-pre:rounded-lg prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:text-[0.82rem]">
         <ReactMarkdown>{lesson.theory_markdown}</ReactMarkdown>
       </article>
-      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 dark:bg-primary/10">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-primary mb-2">Exercise</p>
-        <p className="text-sm leading-relaxed text-foreground">{lesson.exercise_prompt}</p>
+
+      <div className="rounded-xl border border-primary/25 bg-primary/5 p-5 dark:bg-primary/10">
+        <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-primary/80 mb-2.5">Exercise</p>
+        <p className="text-[0.9rem] leading-[1.75] text-foreground">{lesson.exercise_prompt}</p>
       </div>
     </div>
   )

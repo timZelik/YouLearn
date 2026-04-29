@@ -77,12 +77,12 @@ export default async function DashboardPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-10 flex flex-col gap-10">
         {/* Path header */}
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Your learning path</p>
-          <h1 className="text-2xl font-bold leading-snug">
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">Your learning path</p>
+          <h1 className="text-[1.6rem] font-semibold tracking-tight leading-snug">
             {(learningPath as { title?: string } | null)?.title ?? 'Your Learning Path'}
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5 max-w-2xl">
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
             {(learningPath as { description?: string } | null)?.description}
           </p>
         </div>

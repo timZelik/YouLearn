@@ -59,29 +59,29 @@ export default function LandingPage() {
             Powered by Claude AI
           </span>
 
-          <h1 className="text-5xl font-extrabold tracking-tight leading-[1.1] md:text-6xl">
+          <h1 className="text-5xl font-bold tracking-[-0.03em] leading-[1.08] md:text-[3.75rem]">
             Your background.{' '}
             <br className="hidden sm:block" />
             Your goals.{' '}
-            <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-400 bg-clip-text text-transparent">
               Your path.
             </span>
           </h1>
 
-          <p className="max-w-lg text-base text-muted-foreground md:text-lg">
+          <p className="max-w-[480px] text-[1.05rem] leading-[1.7] text-muted-foreground">
             Tell us where you are and where you want to go. YouLearn builds a
-            personalized 5-course coding curriculum with real exercises, hidden test
-            cases, and AI feedback on every submission.
+            personalized 5-course coding curriculum — real exercises, hidden test
+            cases, and Claude AI feedback on every submission.
           </p>
 
-          <div className="flex flex-col items-center gap-3 sm:flex-row">
+          <div className="flex flex-col items-center gap-3 sm:flex-row mt-1">
             <Link
               href="/login"
               className="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
             >
               Get started free →
             </Link>
-            <span className="text-xs text-muted-foreground">No credit card required</span>
+            <span className="text-xs text-muted-foreground">No account required</span>
           </div>
         </div>
       </main>

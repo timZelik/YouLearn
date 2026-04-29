@@ -62,19 +62,19 @@ export default function CourseCard({ course }: CourseCardProps) {
         {/* Header */}
         <div className="flex items-start gap-4">
           <div className="flex flex-col gap-1 flex-1 min-w-0">
-            <span className="text-xs font-medium text-muted-foreground">
+            <span className="text-[0.65rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">
               Course {course.order_index + 1}
             </span>
-            <h3 className="font-semibold leading-snug flex items-center gap-2">
+            <h3 className="font-semibold tracking-tight leading-snug text-[0.95rem] flex items-center gap-2">
               {course.title}
               {isPreparing && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-400">
                   <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
                   Preparing
                 </span>
               )}
             </h3>
-            <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+            <p className="text-[0.82rem] text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
               {course.description}
             </p>
           </div>
