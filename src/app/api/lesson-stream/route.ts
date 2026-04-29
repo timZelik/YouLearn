@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { SupabaseClient } from '@supabase/supabase-js'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { streamLessonGeneration } from '@/lib/generation/generateCourseContent'
 
@@ -106,8 +107,8 @@ function sseHeaders() {
   }
 }
 
-// If already generating elsewhere, stream polling events until done
-function pollingStream(serviceClient: ReturnType<typeof createServiceClient> extends Promise<infer T> ? T : never, lessonId: string): ReadableStream {
+// If already generating elsewhere, poll DB and stream status until done
+function pollingStream(serviceClient: SupabaseClient, lessonId: string): ReadableStream {
   const encoder = new TextEncoder()
   return new ReadableStream({
     async start(controller) {

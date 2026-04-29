@@ -107,8 +107,21 @@ export async function POST(request: NextRequest) {
       console.error('Submission insert error:', subError)
     }
 
-    // Update lesson progress
+    // Update lesson progress on every submit
     if (mode === 'submit') {
+      const { data: existing } = await supabase
+        .from('user_lesson_progress')
+        .select('attempts, best_score, status')
+        .eq('user_id', user.id)
+        .eq('lesson_id', lesson_id)
+        .single()
+
+      const currentAttempts = existing?.attempts ?? 0
+      const currentBest = existing?.best_score ?? 0
+      // Never downgrade a completed lesson back to in_progress
+      const newStatus = existing?.status === 'completed' ? 'completed'
+        : allPassed ? 'completed' : 'in_progress'
+
       await supabase
         .from('user_lesson_progress')
         .upsert(
@@ -116,8 +129,9 @@ export async function POST(request: NextRequest) {
             user_id: user.id,
             lesson_id,
             course_id: lesson.course_id,
-            status: allPassed ? 'completed' : 'in_progress',
-            attempts: 1,
+            status: newStatus,
+            attempts: currentAttempts + 1,
+            best_score: currentBest, // score updated by progress route after feedback
           },
           { onConflict: 'user_id,lesson_id', ignoreDuplicates: false }
         )
