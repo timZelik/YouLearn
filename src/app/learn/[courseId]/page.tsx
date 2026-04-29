@@ -17,7 +17,8 @@ type Lesson = {
   title: string
   difficulty: string
   order_index: number
-  exercise_prompt: string
+  content_status: string
+  exercise_prompt: string | null
   user_lesson_progress: LessonProgress[] | null
 }
 
@@ -39,7 +40,7 @@ export default async function CourseOverviewPage({
     .select(`
       id, title, description, order_index,
       lessons (
-        id, title, difficulty, order_index, exercise_prompt,
+        id, title, difficulty, order_index, content_status, exercise_prompt,
         user_lesson_progress (status, best_score)
       )
     `)
@@ -98,7 +99,11 @@ export default async function CourseOverviewPage({
 
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{lesson.title}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{lesson.exercise_prompt}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                    {lesson.content_status === 'generated'
+                      ? lesson.exercise_prompt
+                      : <span className="italic">Preparing…</span>}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">

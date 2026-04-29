@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { generateCourseContentBatch } from '@/lib/generation/generateCourseContent'
 
 const ProgressSchema = z.object({
   lesson_id: z.string().uuid(),
@@ -80,11 +81,16 @@ export async function POST(request: NextRequest) {
         .from('user_lesson_progress')
         .update({
           best_score: Math.max(existing.best_score, score),
-          attempts: existing.attempts + 1,
           status: score === 100 ? 'completed' : 'in_progress',
         })
         .eq('user_id', user.id)
         .eq('lesson_id', lesson_id)
+    }
+
+    // If lesson just completed, check if the whole course is done
+    // and if so, kick off generation of the next course in the background
+    if (score === 100) {
+      triggerNextCourseIfReady(user.id, lesson_id).catch(console.error)
     }
 
     return NextResponse.json({
@@ -139,4 +145,84 @@ export async function GET() {
     console.error('Progress GET error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
+}
+
+/**
+ * After a lesson is completed, check if all lessons in its course are done.
+ * If so, find the next pending course and kick off generation for it.
+ * Runs fire-and-forget — never blocks the response.
+ */
+async function triggerNextCourseIfReady(userId: string, lessonId: string) {
+  const serviceClient = await createServiceClient()
+
+  // Get the course this lesson belongs to
+  const { data: lesson } = await serviceClient
+    .from('lessons')
+    .select('course_id')
+    .eq('id', lessonId)
+    .single()
+  if (!lesson) return
+
+  // Count remaining incomplete lessons in this course
+  const { count: incomplete } = await serviceClient
+    .from('user_lesson_progress')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('course_id', lesson.course_id)
+    .neq('status', 'completed')
+
+  // Also count lessons that have no progress row yet (not started)
+  const { count: totalLessons } = await serviceClient
+    .from('lessons')
+    .select('id', { count: 'exact', head: true })
+    .eq('course_id', lesson.course_id)
+
+  const { count: progressRows } = await serviceClient
+    .from('user_lesson_progress')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('course_id', lesson.course_id)
+
+  const allDone = (incomplete ?? 0) === 0 && (progressRows ?? 0) === (totalLessons ?? 1)
+  if (!allDone) return
+
+  // Find the current course's order_index
+  const { data: currentCourse } = await serviceClient
+    .from('courses')
+    .select('order_index, learning_path_id')
+    .eq('id', lesson.course_id)
+    .single()
+  if (!currentCourse) return
+
+  // Find the next course in the same path
+  const { data: nextCourse } = await serviceClient
+    .from('courses')
+    .select('id, title, description, status')
+    .eq('learning_path_id', currentCourse.learning_path_id)
+    .eq('order_index', currentCourse.order_index + 1)
+    .single()
+
+  if (!nextCourse || nextCourse.status !== 'pending') return
+
+  // Fetch user context for generation
+  const { data: onboarding } = await serviceClient
+    .from('onboarding_responses')
+    .select('background, goals, preferred_language')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  await generateCourseContentBatch(
+    {
+      courseId: nextCourse.id,
+      courseTitle: nextCourse.title,
+      courseDescription: nextCourse.description,
+      language: onboarding?.preferred_language ?? 'python',
+      userBackground: onboarding?.background ?? '',
+      userGoals: onboarding?.goals ?? '',
+      fromOrderIndex: 0,
+    },
+    serviceClient
+  )
 }

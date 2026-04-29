@@ -41,8 +41,8 @@ export function useCodeExecution(lessonId: string) {
 
       setState((s) => ({ ...s, loading: false, result: data }))
 
-      // Auto-fetch feedback after submit
-      if (mode === 'submit' && data.submission_id) {
+      // Feedback only on passing submit — cost rule: no wasted tokens on failed attempts
+      if (mode === 'submit' && data.all_passed && data.submission_id) {
         setState((s) => ({ ...s, feedbackLoading: true }))
         try {
           const fbRes = await fetch('/api/feedback', {
