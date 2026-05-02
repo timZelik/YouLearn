@@ -205,13 +205,12 @@ async function triggerNextCourseIfReady(userId: string, lessonId: string) {
 
   if (!nextCourse || nextCourse.status !== 'pending') return
 
-  // Fetch user context for generation
-  const { data: onboarding } = await serviceClient
-    .from('onboarding_responses')
+  // Per-path context (not latest onboarding) so the right topic is used
+  // when a user has multiple paths.
+  const { data: pathCtx } = await serviceClient
+    .from('learning_paths')
     .select('background, goals, preferred_language')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(1)
+    .eq('id', currentCourse.learning_path_id)
     .single()
 
   await generateCourseContentBatch(
@@ -219,9 +218,9 @@ async function triggerNextCourseIfReady(userId: string, lessonId: string) {
       courseId: nextCourse.id,
       courseTitle: nextCourse.title,
       courseDescription: nextCourse.description,
-      language: onboarding?.preferred_language ?? 'python',
-      userBackground: onboarding?.background ?? '',
-      userGoals: onboarding?.goals ?? '',
+      language: pathCtx?.preferred_language ?? 'python',
+      userBackground: pathCtx?.background ?? '',
+      userGoals: pathCtx?.goals ?? '',
       fromOrderIndex: 0,
     },
     serviceClient

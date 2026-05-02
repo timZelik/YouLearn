@@ -20,19 +20,19 @@ export async function POST(request: NextRequest) {
 
     const { data: course } = await supabase
       .from('courses')
-      .select('id, title, description')
+      .select('id, title, description, learning_path_id')
       .eq('id', course_id)
       .eq('user_id', user.id)
       .single()
 
     if (!course) return NextResponse.json({ error: 'Course not found' }, { status: 404 })
 
-    const { data: onboarding } = await supabase
-      .from('onboarding_responses')
+    // Per-path context (not latest onboarding) so the right topic is used
+    // when a user has multiple paths.
+    const { data: pathCtx } = await supabase
+      .from('learning_paths')
       .select('background, goals, preferred_language')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('id', course.learning_path_id)
       .single()
 
     const serviceClient = await createServiceClient()
@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
         courseId: course_id,
         courseTitle: course.title,
         courseDescription: course.description,
-        language: onboarding?.preferred_language ?? 'python',
-        userBackground: onboarding?.background ?? '',
-        userGoals: onboarding?.goals ?? '',
+        language: pathCtx?.preferred_language ?? 'python',
+        userBackground: pathCtx?.background ?? '',
+        userGoals: pathCtx?.goals ?? '',
         fromOrderIndex: from_order_index,
       },
       serviceClient

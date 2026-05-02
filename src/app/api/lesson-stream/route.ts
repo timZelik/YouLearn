@@ -40,21 +40,22 @@ export async function GET(request: NextRequest) {
     return new Response(pollingStream(serviceClient, lessonId), { headers: sseHeaders() })
   }
 
-  // Fetch course + user context
-  const [{ data: course }, { data: onboarding }] = await Promise.all([
-    serviceClient
-      .from('courses')
-      .select('title, description')
-      .eq('id', lesson.course_id)
-      .single(),
-    serviceClient
-      .from('onboarding_responses')
-      .select('background, goals, preferred_language')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single(),
-  ])
+  // Fetch course + per-path topic context. We use the path's own
+  // background/goals/language rather than the user's latest onboarding
+  // response — those diverge once a user has multiple paths.
+  const { data: course } = await serviceClient
+    .from('courses')
+    .select('title, description, learning_path_id')
+    .eq('id', lesson.course_id)
+    .single()
+
+  const { data: pathCtx } = course?.learning_path_id
+    ? await serviceClient
+        .from('learning_paths')
+        .select('background, goals, preferred_language')
+        .eq('id', course.learning_path_id)
+        .single()
+    : { data: null }
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -76,9 +77,9 @@ export async function GET(request: NextRequest) {
             courseId: lesson.course_id,
             courseTitle: course?.title ?? '',
             courseDescription: course?.description ?? '',
-            language: onboarding?.preferred_language ?? 'python',
-            userBackground: onboarding?.background ?? '',
-            userGoals: onboarding?.goals ?? '',
+            language: pathCtx?.preferred_language ?? 'python',
+            userBackground: pathCtx?.background ?? '',
+            userGoals: pathCtx?.goals ?? '',
           },
           serviceClient,
           (chunk) => {

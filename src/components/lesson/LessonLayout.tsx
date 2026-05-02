@@ -57,7 +57,7 @@ export default function LessonLayout({ lesson, courseTitle, nextLesson }: Lesson
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
       {/* Top bar — sidebar handles navigation, this just shows context */}
-      <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-2.5 flex-shrink-0">
+      <header className="flex items-center gap-3 border-b border-border bg-card pl-14 pr-4 lg:px-4 py-2.5 flex-shrink-0">
         <span className="text-sm font-medium truncate flex-1">{lesson.title}</span>
         <span className="text-xs text-muted-foreground hidden sm:block">{langName}</span>
         <span className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${DIFFICULTY_STYLES[lesson.difficulty] ?? ''}`}>

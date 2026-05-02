@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
     const language = languageMap[lesson.judge0_language_id] ?? 'code'
 
     const feedback = await generateFeedback({
-      exercisePrompt: lesson.exercise_prompt,
-      starterCode: lesson.starter_code,
+      exercisePrompt: lesson.exercise_prompt ?? '',
+      starterCode: lesson.starter_code ?? '',
       submittedCode: submission.code,
       testResults: submission.test_results as unknown as TestResult[],
       language,

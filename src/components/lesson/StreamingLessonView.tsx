@@ -41,7 +41,7 @@ export default function StreamingLessonView({ lessonId, lessonTitle }: Props) {
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-2.5 flex-shrink-0">
+      <header className="flex items-center gap-3 border-b border-border bg-card pl-14 pr-4 lg:px-4 py-2.5 flex-shrink-0">
         <span className="text-sm text-muted-foreground">← Dashboard</span>
         <span className="text-muted-foreground">/</span>
         <span className="text-sm font-medium truncate">{lessonTitle}</span>
@@ -67,7 +67,7 @@ export default function StreamingLessonView({ lessonId, lessonTitle }: Props) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Theory streaming */}
-        <div className="w-[48%] border-r border-border flex flex-col overflow-hidden">
+        <div className="w-full lg:w-[48%] border-r border-border flex flex-col overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/30 flex-shrink-0">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Theory</span>
           </div>
@@ -95,8 +95,8 @@ export default function StreamingLessonView({ lessonId, lessonTitle }: Props) {
           </div>
         </div>
 
-        {/* Right placeholder */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground bg-muted/10">
+        {/* Right placeholder — desktop only; mobile shows just the streaming theory */}
+        <div className="hidden lg:flex flex-1 flex-col items-center justify-center gap-4 text-muted-foreground bg-muted/10">
           <div className="h-10 w-10 rounded-full border-4 border-border border-t-primary animate-spin" />
           <p className="text-sm">Exercise & editor loading…</p>
         </div>

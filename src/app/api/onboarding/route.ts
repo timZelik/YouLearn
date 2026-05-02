@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
         title: stub.title,
         description: stub.description,
         judge0_language_id: judge0LanguageId,
+        background: data.background,
+        goals: data.goals,
+        preferred_language: data.preferred_language,
         courses: stub.courses,
       })),
     })
@@ -83,23 +86,17 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (firstCourse) {
-      const { data: onboarding } = await supabase
-        .from('onboarding_responses')
-        .select('background, goals, preferred_language')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
+      // Use the just-submitted form data — it's authoritative for this path,
+      // and `data` is in scope, so no extra DB roundtrip needed.
       waitUntil(
         generateCourseContentBatch(
           {
             courseId: firstCourse.id,
             courseTitle: firstCourse.title,
             courseDescription: firstCourse.description,
-            language: onboarding?.preferred_language ?? data.preferred_language,
-            userBackground: onboarding?.background ?? data.background,
-            userGoals: onboarding?.goals ?? data.goals,
+            language: data.preferred_language,
+            userBackground: data.background,
+            userGoals: data.goals,
             fromOrderIndex: 0,
           },
           serviceClient

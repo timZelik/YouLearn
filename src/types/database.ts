@@ -20,6 +20,8 @@ export type Database = {
           longest_streak: number
           last_activity_date: string | null
           onboarding_completed: boolean
+          paths_created: number
+          max_free_paths: number
         }
         Insert: {
           id: string
@@ -31,6 +33,8 @@ export type Database = {
           longest_streak?: number
           last_activity_date?: string | null
           onboarding_completed?: boolean
+          paths_created?: number
+          max_free_paths?: number
         }
         Update: {
           id?: string
@@ -42,6 +46,8 @@ export type Database = {
           longest_streak?: number
           last_activity_date?: string | null
           onboarding_completed?: boolean
+          paths_created?: number
+          max_free_paths?: number
         }
         Relationships: []
       }
@@ -82,6 +88,9 @@ export type Database = {
           created_at: string
           title: string
           description: string
+          background: string
+          goals: string
+          preferred_language: string
         }
         Insert: {
           id?: string
@@ -89,6 +98,9 @@ export type Database = {
           created_at?: string
           title: string
           description: string
+          background: string
+          goals: string
+          preferred_language: string
         }
         Update: {
           id?: string
@@ -96,6 +108,9 @@ export type Database = {
           created_at?: string
           title?: string
           description?: string
+          background?: string
+          goals?: string
+          preferred_language?: string
         }
         Relationships: []
       }
@@ -108,6 +123,7 @@ export type Database = {
           title: string
           description: string
           order_index: number
+          status: string
         }
         Insert: {
           id?: string
@@ -117,6 +133,7 @@ export type Database = {
           title: string
           description: string
           order_index: number
+          status?: string
         }
         Update: {
           id?: string
@@ -126,6 +143,7 @@ export type Database = {
           title?: string
           description?: string
           order_index?: number
+          status?: string
         }
         Relationships: []
       }
@@ -136,13 +154,14 @@ export type Database = {
           user_id: string
           created_at: string
           title: string
-          theory_markdown: string
-          exercise_prompt: string
-          starter_code: string
-          solution_code: string
+          theory_markdown: string | null
+          exercise_prompt: string | null
+          starter_code: string | null
+          solution_code: string | null
           judge0_language_id: number
           difficulty: string
           order_index: number
+          content_status: string
         }
         Insert: {
           id?: string
@@ -150,13 +169,14 @@ export type Database = {
           user_id: string
           created_at?: string
           title: string
-          theory_markdown: string
-          exercise_prompt: string
-          starter_code: string
-          solution_code: string
+          theory_markdown?: string | null
+          exercise_prompt?: string | null
+          starter_code?: string | null
+          solution_code?: string | null
           judge0_language_id: number
           difficulty: string
           order_index: number
+          content_status?: string
         }
         Update: {
           id?: string
@@ -164,13 +184,14 @@ export type Database = {
           user_id?: string
           created_at?: string
           title?: string
-          theory_markdown?: string
-          exercise_prompt?: string
-          starter_code?: string
-          solution_code?: string
+          theory_markdown?: string | null
+          exercise_prompt?: string | null
+          starter_code?: string | null
+          solution_code?: string | null
           judge0_language_id?: number
           difficulty?: string
           order_index?: number
+          content_status?: string
         }
         Relationships: []
       }
@@ -312,7 +333,7 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
-      create_learning_path: {
+      create_path_stub: {
         Args: { payload: Json }
         Returns: string
       }

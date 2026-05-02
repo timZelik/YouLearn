@@ -63,21 +63,31 @@ export default async function LessonPage({
   if (!lessonRaw) notFound()
   const lesson = lessonRaw as unknown as LessonRow
 
-  // Fetch full learning path for sidebar — runs in parallel with lesson fetch above
-  const { data: pathRaw } = await supabase
-    .from('learning_paths')
-    .select(`
-      id, title,
-      courses (
-        id, title, order_index, status,
-        lessons (
-          id, title, difficulty, order_index, content_status,
-          user_lesson_progress (status)
-        )
-      )
-    `)
+  // Find which path this course belongs to (user may have multiple paths)
+  const { data: courseRow } = await supabase
+    .from('courses')
+    .select('learning_path_id')
+    .eq('id', courseId)
     .eq('user_id', user.id)
     .single()
+
+  // Fetch the parent learning path with its full course/lesson tree for the sidebar
+  const { data: pathRaw } = courseRow?.learning_path_id
+    ? await supabase
+        .from('learning_paths')
+        .select(`
+          id, title,
+          courses (
+            id, title, order_index, status,
+            lessons (
+              id, title, difficulty, order_index, content_status,
+              user_lesson_progress (status)
+            )
+          )
+        `)
+        .eq('id', courseRow.learning_path_id)
+        .single()
+    : { data: null }
 
   const path = pathRaw as unknown as LearningPathRow | null
 
@@ -104,7 +114,8 @@ export default async function LessonPage({
   const currentCourse = sidebarCourses.find((c) => c.id === courseId)
   const currentLessons = currentCourse?.lessons ?? []
   const currentIdx = currentLessons.findIndex((l) => l.id === lessonId)
-  const nextLesson = currentLessons[currentIdx + 1] ?? null
+  const nextLessonNav = currentLessons[currentIdx + 1] ?? null
+  const nextLesson = nextLessonNav ? { id: nextLessonNav.id, course_id: courseId } : null
 
   const sidebar = (
     <PathSidebar
